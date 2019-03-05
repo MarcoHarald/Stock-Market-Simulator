@@ -2,6 +2,17 @@ import numpy as np
 import random
 import matplotlib.pylab as plt
 
+
+#initialising Geometric Mean
+def geoMean(array):    
+    val = 1.0
+    for prices in range(len(array)):
+        val = array[prices]
+    val = pow(val, 1/len(array))    
+    print('geometric mean is:  ',val)
+    
+
+
 drift = 0.001
 
 itrtns = 100
@@ -38,13 +49,6 @@ for gen in range(simulations):
 
 #variable drift
 #drift = priceHist(sim, t)-priceHist(sim, t-5)
-
-
-
-
-
-
-
 
 
 #PRINT Quantile Distribution
@@ -87,11 +91,19 @@ for i in range(itrtns):
 plt.plot(t, price)
 plt.ylabel('Price ($)',fontsize=10)
 plt.xlabel('Time (days)',fontsize=10)
+fraction = 0.9
 plt.show()
 
 
 #KELLY CRITERION
 fKelly = min(mu/(sigma*sigma),1)
+
+findMu = average
+
+
+
+
+geoMean(lastPrice)
 
 #prob of loss
 i = 0
