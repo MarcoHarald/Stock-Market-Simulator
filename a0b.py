@@ -32,13 +32,11 @@ def findMu(price, today, daysBack, gen):
         upside = 0
         countUpside = 0
         countDownside = 0
-
-        # print('today price',price[gen,today])
-        # print('hist price', price[gen, today - day])
-
+        if price[gen,today]<1.0:
+            print('today price',price[gen,today])
+            print('hist price', price[gen, today - day])
+            print('gen',gen,'today',today,'day',day)
         localChange = price[gen,today]-price[gen,today-day]
-        # print('checkmu',localChange)
-
 
         if localChange > 0:
             upside = localChange*localChange+upside
@@ -49,7 +47,7 @@ def findMu(price, today, daysBack, gen):
 
         weightedChange = pow(upside/max(countUpside,1),0.5)-pow(downside/max(countDownside,1),0.5)
         # print('mu change',weightedChange)
-        return weightedChange/price[gen,today]
+        return weightedChange/price[gen,today-daysBack]
 
 
 def movAvg(price, gen, target, bound):
@@ -67,7 +65,7 @@ def findSigma(price, today, daysBack, mu, gen):
     for day in range(daysBack):
         localDeviation = movAvg(price, gen, day, 10)
         sigma = pow(localDeviation,2)+sigma
-    return pow(sigma/daysBack,0.5)/price[gen,today]
+    return pow(sigma/daysBack,0.5)/price[gen,5]
 
 # -----------VARIABLE SETUP-----------
 
@@ -76,23 +74,26 @@ def findSigma(price, today, daysBack, mu, gen):
 simulations = 100
 
 # days into future prediction
-itrtns = 100
+itrtns = 50
+
+# extent of simulation
+future = 1
 
 # prediction start date, database extent backwards
-today = 600
-daysBack = 100
+today = 100
+daysBack = 50
 
 # set bound for moving average operation
 avgBound = 10
 # set margin for graphing grouping options
-margin = 0.01
+margin = 0.1
 
 # correction coefficients
-drift = 0.1
-sigma = 0.01
+drift0 = 0.1
+sigma0 = 0.001
 
-lowerBound = min(today-100,avgBound+1)
-upperBound = itrtns + today
+lowerBound = today-70
+upperBound = today + future
 
 
 # -----------DATA SETUP-----------
@@ -110,18 +111,16 @@ for i in range(0,len(data)-1):
 print('Closing price data saved to separate array.')
 # initiate price prediction array
 gssPrice = np.zeros((simulations,len(realPrices)))
+localPrice = np.zeros((itrtns+1))
 
 # intial: assign real prices to all simulations
 for gen in range(simulations):
     # within each simulation iterate through all previous days to assign true value
-    for i in range(len(realPrices)):
+    for i in range(0,today+daysBack):
         gssPrice[gen, i] = realPrices[i]
 
-drift = drift * findMu(gssPrice,today,daysBack,1)
-sigma = sigma * findSigma(gssPrice,today,daysBack,drift,1)
-
-print('number of data points:',len(data))
-print('drift:',drift,'    sigma:',sigma)
+#print('number of data points:',len(data))
+#print('drift:',drift,'    sigma:',sigma)
 
 
 print('-----------PHASE 2-----------')
@@ -132,13 +131,33 @@ print('')
 for gen in range(simulations):
     # update with most recent data
     # gssPrice[gen, today] = realPrices[today]
+    print('gen',gen)
 
-    for t in range(itrtns):
+    for activeDay in range(today, today+future):
+        drift = drift0
+        sigma = sigma0
         # keep track of how many day into the future
-        day = today+t
-        #  print(gssPrice[gen, day]
-        # new share price calculation   {{ drift * gssPrice[gen, day] }}
-        gssPrice[gen, day + 1] = gssPrice[gen, day] + gssPrice[gen, day] * random.normalvariate(drift, sigma)
+        day = activeDay
+        drift = drift * findMu(gssPrice, day, daysBack, 1)
+        sigma = sigma * findSigma(gssPrice, day, daysBack, drift, 1)
+        #set first value
+        localPrice[0] = realPrices[activeDay] #+ realPrices[activeDay] * random.normalvariate(drift, sigma)
+
+        for t in range(itrtns):
+                # new share price calculation   {{ drift * gssPrice[gen, day] }}
+                #print('check 2')
+                #print('sigma', sigma, 'drift', drift)
+                #print('day', day)
+                #print('realPrice', realPrices[day])
+                #print('localPrice', localPrice[t + 1])
+                day = activeDay + t
+                drift = drift * findMu(gssPrice, day, daysBack, 1)
+                sigma = sigma * findSigma(gssPrice, day, daysBack, drift, 1)
+                #print(localPrice[t])
+                localPrice[t + 1] = localPrice[t] + localPrice[t] * random.normalvariate(drift, sigma)
+                #print('check 3')
+        gssPrice[gen, day + itrtns] = localPrice[itrtns-1]
+       # print('diff:',gssPrice[gen, day + itrtns]/localPrice[0])
     gen = +1
 
 # create log of all prices at certain time into simulation
@@ -230,6 +249,32 @@ plt.xlabel('Time (days)', fontsize=10)
 plt.show()
 
 
+# PRINT Quantile Distribution
+# create time axis
+xAxis = []
+for i in range(simulations):
+    xAxis += [i]
+
+# create price axis (ordering the prices: increasing magnitude)
+orderedPrices = np.sort(lastPrice)
+
+#find geometric mean
+
+plt.plot(xAxis, orderedPrices)
+plt.ylabel('Final Price ($)', fontsize=10)
+plt.xlabel('# of simulations', fontsize=10)
+plt.show()
+
+# PRINT CDF
+# create price axis (ordering the prices: increasing magnitude)
+cumul = np.zeros(len(orderedPrices))
+for i in range(0, len(orderedPrices)):
+    cumul[i] = 1.0 - float(i) / float(simulations)
+
+plt.plot(orderedPrices, cumul)
+plt.ylabel('Fraction Above Given Price', fontsize=10)
+plt.xlabel('Share Price ($)', fontsize=10)
+plt.show()
 exit()
 # -----------END OF EXECUTION--------------
 
@@ -256,8 +301,8 @@ for i in range(0, len(orderedPrices)):
     cumul[i] = 1.0 - float(i) / float(simulations)
 
 plt.plot(orderedPrices, cumul)
-plt.ylabel('fraction above', fontsize=10)
-plt.xlabel('share price', fontsize=10)
+plt.ylabel('Fraction Above Given Price', fontsize=10)
+plt.xlabel('Share Price ($)', fontsize=10)
 plt.show()
 
 #  ------------
