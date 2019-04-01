@@ -24,30 +24,8 @@ def average(array):
 
 # determine mu: price Historical, last known price date, how many days back to calculate value
 def findMu(price, today, daysBack, gen):
-
-    # mu = price[gen,today]-price[gen,today-daysBack]
-
-    for day in range(1,daysBack):
-        downside = 0
-        upside = 0
-        countUpside = 0
-        countDownside = 0
-        if price[gen,today]<1.0:
-            print('today price',price[gen,today])
-            print('hist price', price[gen, today - day])
-            print('gen',gen,'today',today,'day',day)
-        localChange = price[gen,today]-price[gen,today-day]
-
-        if localChange > 0:
-            upside = localChange*localChange+upside
-            countUpside +=1
-        elif localChange < 0:
-            downside = localChange*localChange+downside
-            countDownside +=1
-
-        weightedChange = pow(upside/max(countUpside,1),0.5)-pow(downside/max(countDownside,1),0.5)
-        # print('mu change',weightedChange)
-        return weightedChange/price[gen,today-daysBack]
+    mu = price[gen,today]-price[gen,today-daysBack]
+    return mu
 
 
 def movAvg(price, gen, target, bound):
@@ -71,28 +49,28 @@ def findSigma(price, today, daysBack, mu, gen):
 
 
 # number of scenarios produced
-simulations = 100
+simulations = 10
 
 # days into future prediction
-itrtns = 50
+itrtns = 20
 
 # extent of simulation
-future = 1
+future = 10
 
 # prediction start date, database extent backwards
-today = 100
-daysBack = 50
+today = 20
+daysBack = 10
 
 # set bound for moving average operation
 avgBound = 10
 # set margin for graphing grouping options
-margin = 0.1
+margin = 0.99
 
 # correction coefficients
 drift0 = 0.1
 sigma0 = 0.001
 
-lowerBound = today-70
+lowerBound = today-daysBack
 upperBound = today + future
 
 
@@ -154,7 +132,11 @@ for gen in range(simulations):
                 drift = drift * findMu(gssPrice, day, daysBack, 1)
                 sigma = sigma * findSigma(gssPrice, day, daysBack, drift, 1)
                 #print(localPrice[t])
+                drift = 0.01
+                sigma = 0.0075
+
                 localPrice[t + 1] = localPrice[t] + localPrice[t] * random.normalvariate(drift, sigma)
+                print('sigma',sigma,'drift',drift,'calculated price',localPrice[t+1])
                 #print('check 3')
         gssPrice[gen, day + itrtns] = localPrice[itrtns-1]
        # print('diff:',gssPrice[gen, day + itrtns]/localPrice[0])
@@ -177,19 +159,21 @@ tier2 = []
 averagePrediction = average(lastPrice)
 
 for gen in range(simulations):
-    if averagePrediction*(1 + margin) > gssPrice[gen, itrtns + today] > averagePrediction*(1 - margin):
-        tier1 += [gen]
-    elif averagePrediction*(1 + margin) < gssPrice[gen, itrtns + today]:
-        tier0 += [gen]
-    elif averagePrediction*(1 - margin) > gssPrice[gen, itrtns + today]:
-        tier2 += [gen]
+    tier1 += [gen]
+
+#    if averagePrediction*(1 + margin) > gssPrice[gen, itrtns + today] > averagePrediction*(1 - margin):
+#       tier1 += [gen]
+#    elif averagePrediction*(1 + margin) < gssPrice[gen, itrtns + today]:
+#        tier0 += [gen]
+#    elif averagePrediction*(1 - margin) > gssPrice[gen, itrtns + today]:
+#        tier2 += [gen]
 
 print(f'Simulations within {margin} of average prediction {len(tier1)} : {tier1}')
 
 # create log of all prices at certain time into simulation
 cPrice = []
 for gen in range(simulations):
-    cPrice += [gssPrice[gen, itrtns+today-50]]
+    cPrice += [gssPrice[gen, itrtns+today-1]]
 
 # calculate moving average for values in selected streams
 avgPrices = np.zeros((len(tier1), len(realPrices)))
@@ -275,6 +259,8 @@ plt.plot(orderedPrices, cumul)
 plt.ylabel('Fraction Above Given Price', fontsize=10)
 plt.xlabel('Share Price ($)', fontsize=10)
 plt.show()
+
+
 exit()
 # -----------END OF EXECUTION--------------
 
@@ -357,6 +343,33 @@ plt.plot(t, predPrice3, 'y', label='4° Quintile (Predicted Price)')
 for prices in range(len(array)):
     val = val + prices
 val = val / len(array)
+
+# --------------
+
+exit()
+
+# --------------
+
+downside = 0
+upside = 0
+countUpside = 0
+countDownside = 0
+if price[gen, today] < 1.0:
+    print('today price', price[gen, today])
+    print('hist price', price[gen, today - day])
+    print('gen', gen, 'today', today, 'day', day)
+localChange = price[gen, today] - price[gen, today - day]
+
+if localChange > 0:
+    upside = localChange * localChange + upside
+    countUpside += 1
+elif localChange < 0:
+    downside = localChange * localChange + downside
+    countDownside += 1
+
+weightedChange = pow(upside / max(countUpside, 1), 0.5) - pow(downside / max(countDownside, 1), 0.5)
+# print('mu change',weightedChange)
+#return weightedChange / price[gen, today - daysBack]
 
 
 
