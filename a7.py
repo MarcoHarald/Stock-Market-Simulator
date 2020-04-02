@@ -36,7 +36,7 @@ def previewFile(data):
 
 # fetching data files
 import glob
-dataFiles =(glob.glob("data/*"))
+dataFiles =(glob.glob("data/* Historical Data.csv"))
 
 # checking files
 print('')
@@ -47,14 +47,50 @@ for i in range(len(dataFiles)):
 print('-------------------------------')
 print('')
 
-
+arr1 = []
 # select data file to open and save
-csv_file = dataFiles[0]
-data = readCSV(csv_file)
+for i in range(len(dataFiles)): 
+    arr1 += [readCSV(dataFiles[i])]
+    previewFile(arr1[i])
 
-previewFile(data)
-# converting dates to computer friendly format
+    # converting dates to computer friendly format
+    for j in range(1,len(arr1[i])):
+        arr1[i][j][0] = convTime(arr1[i][j][0])
+        
+# plotting values
+# plot ------------------------------------------------------------------------------------------------
 
-date_time_str = convTime(data[1][0])
-print(date_time_str)
+targetStocks = [0,4]
+targetDataTypes = [1]
+
+for j in targetStocks:
+    targetStock = j
+    
+    for targetDataType in targetDataTypes:
+        # target specific stock data
+        targData = arr1[targetStock]
+        
+        t = []
+        ax = []
+        
+        # make a plot line: loop through a single data type for a single stock
+        for i in range(1,len(targData)):
+
+            if not '-' in targData[i][targetDataType]:            
+               #print('A1',j, i,targData[i][0],targData[i][targetDataType].replace(',', '').replace("-"," "))
+                
+                t += [targData[i][0]]
+                ax += [float(targData[i][targetDataType].replace(',', '').replace("K",""))]
+        
+        # set data type & stock names
+        plt.plot(t, ax, label=dataFiles[targetStock][5:8]+'_'+targData[0][targetDataType])
+
+plt.legend(loc='upper left')
+plt.ylabel('Price ($)', fontsize=10)
+plt.xlabel('Time (days)', fontsize=10)
+plt.show()
+
+
+
+
 
