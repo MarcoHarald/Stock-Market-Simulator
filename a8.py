@@ -50,7 +50,22 @@ def midMovAvg(price, gen, target, bound):
     return avgPrice / (2*bound)
 
 
+# transpose input data array
+def transposeArr(data):
+    outArr = []
+    
+    # setup new blank
+    for i in range(len(data[0])):
+        outArr += [[]]
+    
+    # copy values over in label-columns instead of timestamp-rows
+    for i in range(len(data)):
+        # loop through new columns
+        for j in range(len(outArr)):
+            outArr[j] += [data[i][j]]
 
+    return outArr
+ 
 # --end functions--
 
 
@@ -77,19 +92,63 @@ for i in range(len(dataFiles)):
     for j in range(1,len(arr1[i])):
         arr1[i][j][0] = convTime(arr1[i][j][0])
         
- 
+# convert array setup, loop through all data sets
+arr2 = []
+for i in range(len(arr1)):
+    data = arr1[1]
+    arr2 += [transposeArr(data)]
+
+# print(len(arr2),len(arr2[1]))    # checkTEST
+
+# convert to floats 
+targetCols =  [1,2,3,4,5]
+
+# loop through file sources
+for k in range(5,len(arr2)):
+    # loop through target cols
+    for i in targetCols:
+        # loop through relevant values
+        for j in range(1,len(arr2[k][i])):
+            #print(i,j,k)
+            b =(arr2[k][i][j])
+
+            if '-' in arr2[k][i][j]:
+                try:
+                    arr2[k][i][j] = 0
+            else:
+                arr2[k][i][j] = float(arr2[k][i][j].replace(',', '').replace("K",""))
+            
+            print(b,arr2[k][i][j])
+
+                
 targetStock = 1
 
 data = arr1[targetStock]
 samplingLength = 1     # how large the sampling frequency will be
 # calculate % change for series
 
-# append label
-arr1[targetStock][0] += ['%d -day Return' % (samplingLength) ] 
+# append column with label
+arr2[targetStock] += ['%d -day Return' % (samplingLength) ]
+intervalSize  = 3
+targetCol  = 2
+outCol = 7
 
+outData = []
+# add blank spaces where change cant be calc
+for i in range(intervalSize):
+    outData += ['']
+    
+data = arr2[targetStock][targetCol]
+print(arr2[targetStock][targetCol])
 # loop through all timestamps and append value
-for i in range(2,len(data)):
-    print(1)    
+for i in range(intervalSize,len(data)):
+    # calc percentage change
+    outData += [float(data[i])/float(data[i-intervalSize])]
+    
+print(outData)
+    
+    
+       
     
 
 
